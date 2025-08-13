@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<opencv_storage>
+
+<emotion_impl_name>version_2.0</emotion_impl_name>
+
+<analysis>share/processing_block/emotion_estimator/heavy/1.enc</analysis>
+<use_cuda>false</use_cuda>
+<use_legacy>false</use_legacy>
+
+</opencv_storage>
