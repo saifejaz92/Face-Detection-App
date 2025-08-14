@@ -136,7 +136,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
         _showMessage("More than one face detected. Make sure only one person is in frame.");
         return;
       }
-
+//work
       // 2) fit (keypoints)
       await _faceFitter!.process(data);
 

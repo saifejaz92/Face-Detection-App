@@ -26,7 +26,7 @@ packages:
     source: hosted
     version: "2.1.2"
   camera:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       name: camera
       sha256: d6ec2cbdbe2fa8f5e0d07d8c06368fe4effa985a4a5ddade9cc58a8cd849557d
@@ -34,7 +34,7 @@ packages:
     source: hosted
     version: "0.11.2"
   camera_android_camerax:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       name: camera_android_camerax
       sha256: "58b8fe843a3c83fd1273c00cb35f5a8ae507f6cc9b2029bcf7e2abba499e28d8"
@@ -478,4 +478,4 @@ packages:
     version: "6.5.0"
 sdks:
   dart: ">=3.8.1 <4.0.0"
-  flutter: ">=3.27.0"
+  flutter: ">=3.29.0"
