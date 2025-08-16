@@ -4,6 +4,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import androidx.annotation.NonNull // ✅ Correct import
+import android.util.Log
 
 class MainActivity : FlutterActivity() {
     private fun _getNativeLibDir(): String {
@@ -16,6 +17,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 if (call.method == "getNativeLibDir") {
                     val nativeLibDir: String = _getNativeLibDir()
+                    Log.d("NativeLibDir", "Path: $nativeLibDir")
                     result.success(nativeLibDir)
                 } else {
                     result.notImplemented()

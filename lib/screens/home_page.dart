@@ -14,7 +14,10 @@ class HomePage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.blueAccent,
       ),
-      body: Center(
+      body:
+      // Container(height: 200, width: 200,
+      //     color: Colors.white),
+      Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
