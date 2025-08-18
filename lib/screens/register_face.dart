@@ -74,7 +74,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
     // unit types and modifications follow docs examples
     _faceDetector = await gFaceService.createAsyncProcessingBlock({
       "unit_type": "FACE_DETECTOR",
-      "modification": "blf_front" // front camera detector
+      "modification": "uld" // front camera detector
     });
 
     _faceFitter = await gFaceService.createAsyncProcessingBlock({
@@ -97,7 +97,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
     _cameraController?.dispose();
     _faceDetector?.dispose();
     _faceFitter?.dispose();
-    _templateExtractor?.dispose();
+    // _templateExtractor?.dispose();
     super.dispose();
   }
 
@@ -141,7 +141,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       await _faceFitter!.process(data);
 
       // 3) extract template
-      await _templateExtractor!.process(data);
+      // await _templateExtractor!.process(data);
 
       // fetch template from context
       // per docs: after templateExtractor.process(data) the template is at data["objects"][0]["face_template"]["template"]

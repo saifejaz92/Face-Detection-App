@@ -59,11 +59,11 @@ flutter {
     source = "../.."
 }
 
-val cameraxVersion = "1.3.3"
-
-dependencies {
-    implementation("androidx.camera:camera-core:$cameraxVersion")
-    implementation("androidx.camera:camera-camera2:$cameraxVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
-    implementation("androidx.camera:camera-view:$cameraxVersion")
-}
+//val cameraxVersion = "1.3.3"
+//
+//dependencies {
+//    implementation("androidx.camera:camera-core:$cameraxVersion")
+//    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+//    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+//    implementation("androidx.camera:camera-view:$cameraxVersion")
+//}
