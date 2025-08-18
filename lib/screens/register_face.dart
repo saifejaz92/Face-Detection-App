@@ -68,19 +68,6 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       }
 
 
-      // final frontModelPath = await _copyAssetModel(
-      //   'assets/share/facedetectors/blf/front_model.enc',
-      //   'front_model.enc',
-      // );
-      //
-      // final backModelPath = await _copyAssetModel(
-      //   'assets/share/facedetectors/blf/back_model.enc',
-      //   'back_model.enc',
-      // );
-
-      // debugPrint("Front model at: $frontModelPath");
-      // debugPrint("Back model at: $backModelPath");
-
       // create blocks
       _faceDetector =  gFaceService.createProcessingBlock(
           {"unit_type": "FACE_DETECTOR", "modification": "blf_front"});
@@ -161,7 +148,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
 
       // templObj should be a Uint8List blob per plugin docs
       // print(templObj.);
-      print("hello");
+
       Uint8List templateBytes;
       if (templObj is Uint8List || 1==1) {
         templateBytes = templObj.save();
@@ -179,11 +166,10 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       if (!templatesDir.existsSync()) templatesDir.createSync(recursive: true);
 
       final id = DateTime.now().millisecondsSinceEpoch.toString();
-      final templatePath = p.join(templatesDir.path, '$id.template');
+      final templatePath = p.join(templatesDir.path, '$id.bin');
       final templateFile = File(templatePath);
       await templateFile.writeAsBytes(templateBytes);
-print("opop");
-print(await templateFile.exists());
+
 
       data.dispose();
 

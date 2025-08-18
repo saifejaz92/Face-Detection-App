@@ -36,7 +36,10 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
   final Map<String, Map<String, dynamic>> _templatesIndex = {};
 
   // Threshold for declaring a match (tune on device)
-  static const double MATCH_THRESHOLD = 0.20;
+  static const double MATCH_THRESHOLD = 0.00;
+
+  String? bestMatchName;
+  double bestScore = 0.0;
 
   @override
   void initState() {
@@ -113,8 +116,7 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
     // { "<uuid>": { "name": "Alice", "path": "templates/alice.bin" }, ... }
     final dir = await getApplicationDocumentsDirectory();
     final indexFile = File("${dir.path}/templates_index.json");
-    print("LLL");
-    print(await indexFile.exists());
+
     if (!await indexFile.exists()) {
       debugPrint("No templates_index.json found, skipping template load.");
       return;
@@ -126,7 +128,6 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
     final Map<String, dynamic> jsonMap = json.decode(jsonStr);
 
     for (final entry in jsonMap.entries) {
-      print("kkkk");
       final uuid = entry.key;
       final name = entry.value['name'] as String?;
       final pathRelative = entry.value['file'] as String?;
@@ -140,7 +141,6 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
       }
 
       final bytes = await templateFile.readAsBytes();
-print("000");
       try {
         // loadContextTemplate - creates ContextTemplate from raw bytes
         ContextTemplate ct = _service.loadContextTemplate(bytes);
@@ -162,7 +162,6 @@ print("000");
   void _onCameraImage(CameraImage image) async {
     if (_isProcessingFrame) return;
     if (_faceDetector == null || _faceFitter == null || _templateExtractor == null || _verificationModule == null) return;
-// print("hhh");
     _isProcessingFrame = true;
 
     try {
@@ -205,8 +204,8 @@ print("000");
         if (objectsLen == 0) {
           // no faces — clear match
           setState(() {
-            _currentMatchName = null;
-            _currentScore = 0.0;
+            // _currentMatchName = null;
+            // _currentScore = 0.0;
           });
           data.dispose();
           _isProcessingFrame = false;
@@ -231,8 +230,7 @@ print("000");
         ContextTemplate probeTemplate = templObj.get_value();
 
         // Now compare probeTemplate with all stored templates using verification module
-        String? bestMatchName;
-        double bestScore = 0.0;
+
 
         for (final kv in _templatesIndex.entries) {
           final stored = kv.value;
@@ -240,23 +238,20 @@ print("000");
           if (ctxTemplate == null) continue;
 
           // Build verification context with two templates
-          print("111");
-          print(data["objects"][0]["face_template"]);
-          print("222");
-          print(ctxTemplate);
           Context verificationCtx = _service.createContext({
             "template1": data["objects"][0]["face_template"],
-            "template2": ctxTemplate,
+            "template2": stored
           });
 
           try {
-            print("77777");
             await _verificationModule!.process(verificationCtx);
 
             final result = verificationCtx["result"];
             final score = result["score"].get_value() as double? ?? 0.0;
             print("ooooppppp");
             print(score);
+            print(bestScore);
+            print(bestMatchName);
             // keep best
             if (score > bestScore) {
               bestScore = score;
@@ -272,11 +267,13 @@ print("000");
         // If best score above threshold, set current match name
         if (bestMatchName != null && bestScore >= MATCH_THRESHOLD) {
           setState(() {
+            print("ppoooo");
             _currentMatchName = bestMatchName;
             _currentScore = bestScore;
           });
         } else {
           setState(() {
+            print("lolo");
             _currentMatchName = null;
             _currentScore = bestScore;
           });
