@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:face_sdk_3divi/face_sdk_3divi.dart';
@@ -27,7 +28,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
   bool _isRegistering = false;
 
   // face sdk components (async processing blocks are recommended)
-  AsyncProcessingBlock? _faceDetector;
+  ProcessingBlock? _faceDetector;
   AsyncProcessingBlock? _faceFitter;
   AsyncProcessingBlock? _templateExtractor;
 
@@ -42,62 +43,72 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
   }
 
   Future<void> _setup() async {
-    // init camera list
-    _cameras = await availableCameras();
+    try {
+      _cameras = await availableCameras();
+      CameraDescription cameraToUse =
+      _cameras!.firstWhere((c) => c.lensDirection == CameraLensDirection.front,
+          orElse: () => _cameras!.first);
 
-    // choose front camera if available (usually index 1)
-    CameraDescription cameraToUse =
-    _cameras!.firstWhere((c) => c.lensDirection == CameraLensDirection.front,
-        orElse: () => _cameras!.first);
+      _cameraController = CameraController(
+        cameraToUse,
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
+      );
+      await _cameraController!.initialize();
 
-    _cameraController = CameraController(cameraToUse, ResolutionPreset.medium,
-        enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
-
-    await _cameraController!.initialize();
-
-    // prepare index file (templates metadata)
-    final appDoc = await getApplicationDocumentsDirectory();
-    _indexFile = File(p.join(appDoc.path, 'face_index.json'));
-    if (_indexFile.existsSync()) {
-      try {
-        final raw = _indexFile.readAsStringSync();
-        _index = json.decode(raw);
-      } catch (_) {
-        _index = {};
+      final appDoc = await getApplicationDocumentsDirectory();
+      _indexFile = File('${appDoc.path}/templates_index.json');
+      // helper to copy model
+      Future<String> _copyAssetModel(String assetPath, String filename) async {
+        final byteData = await rootBundle.load(assetPath);
+        final file = File(p.join(appDoc.path, filename));
+        await file.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+        return file.path;
       }
-    } else {
-      _indexFile.createSync(recursive: true);
-      _indexFile.writeAsStringSync(json.encode({}));
+
+
+      // final frontModelPath = await _copyAssetModel(
+      //   'assets/share/facedetectors/blf/front_model.enc',
+      //   'front_model.enc',
+      // );
+      //
+      // final backModelPath = await _copyAssetModel(
+      //   'assets/share/facedetectors/blf/back_model.enc',
+      //   'back_model.enc',
+      // );
+
+      // debugPrint("Front model at: $frontModelPath");
+      // debugPrint("Back model at: $backModelPath");
+
+      // create blocks
+      _faceDetector =  gFaceService.createProcessingBlock(
+          {"unit_type": "FACE_DETECTOR", "modification": "blf_front"});
+
+      _faceFitter = await gFaceService.createAsyncProcessingBlock({
+        "unit_type": "FACE_FITTER",
+        "modification": "tddfa_faster",
+      });
+
+      _templateExtractor = await gFaceService.createAsyncProcessingBlock({
+        "unit_type": "FACE_TEMPLATE_EXTRACTOR",
+        "modification": "30",
+      });
+
+      setState(() => _initializing = false);
+    } catch (e, st) {
+      debugPrint("Setup failed: $e\n$st");
+      _showMessage("Face SDK init failed: ${e.toString()}");
     }
-
-    // create async processing blocks as recommended (they work in isolates)
-    // unit types and modifications follow docs examples
-    _faceDetector = await gFaceService.createAsyncProcessingBlock({
-      "unit_type": "FACE_DETECTOR",
-      "modification": "uld" // front camera detector
-    });
-
-    _faceFitter = await gFaceService.createAsyncProcessingBlock({
-      "unit_type": "FACE_FITTER",
-      "modification": "tddfa_faster"
-    });
-
-    _templateExtractor = await gFaceService.createAsyncProcessingBlock({
-      "unit_type": "FACE_TEMPLATE_EXTRACTOR",
-      "modification": "30" // mobile-friendly modification
-    });
-
-    setState(() {
-      _initializing = false;
-    });
   }
+
 
   @override
   void dispose() {
     _cameraController?.dispose();
     _faceDetector?.dispose();
     _faceFitter?.dispose();
-    // _templateExtractor?.dispose();
+    _templateExtractor?.dispose();
     super.dispose();
   }
 
@@ -122,7 +133,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       Context data = gFaceService.createContextFromEncodedImage(imgBytes);
 
       // 1) detect
-      await _faceDetector!.process(data);
+       _faceDetector!.process(data);
 
       // check results
       if (data["objects"].len() == 0) {
@@ -141,7 +152,7 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       await _faceFitter!.process(data);
 
       // 3) extract template
-      // await _templateExtractor!.process(data);
+      await _templateExtractor!.process(data);
 
       // fetch template from context
       // per docs: after templateExtractor.process(data) the template is at data["objects"][0]["face_template"]["template"]
@@ -149,9 +160,11 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       dynamic templObj = data["objects"][0]["face_template"]["template"].get_value();
 
       // templObj should be a Uint8List blob per plugin docs
+      // print(templObj.);
+      print("hello");
       Uint8List templateBytes;
-      if (templObj is Uint8List) {
-        templateBytes = templObj;
+      if (templObj is Uint8List || 1==1) {
+        templateBytes = templObj.save();
       } else if (templObj is List<int>) {
         templateBytes = Uint8List.fromList(List<int>.from(templObj));
       } else {
@@ -169,6 +182,8 @@ class _RegisterFaceScreenState extends State<RegisterFaceScreen> {
       final templatePath = p.join(templatesDir.path, '$id.template');
       final templateFile = File(templatePath);
       await templateFile.writeAsBytes(templateBytes);
+print("opop");
+print(await templateFile.exists());
 
       data.dispose();
 

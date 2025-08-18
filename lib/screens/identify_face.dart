@@ -36,7 +36,7 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
   final Map<String, Map<String, dynamic>> _templatesIndex = {};
 
   // Threshold for declaring a match (tune on device)
-  static const double MATCH_THRESHOLD = 0.70;
+  static const double MATCH_THRESHOLD = 0.20;
 
   @override
   void initState() {
@@ -64,7 +64,7 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
       }
 
       _cameraController = CameraController(
-        _cameras!.first,
+        _cameras![1],
         ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
@@ -90,12 +90,12 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
 
       _templateExtractor = await _service.createAsyncProcessingBlock({
         "unit_type": "FACE_TEMPLATE_EXTRACTOR",
-        "modification": "30m" // mobile-optimized modification; use "30" or "1000" if you prefer
+        "modification": "30" // mobile-optimized modification; use "30" or "1000" if you prefer
       });
 
       _verificationModule = await _service.createAsyncProcessingBlock({
         "unit_type": "VERIFICATION_MODULE",
-        "modification": "30m"
+        "modification": "30"
       });
 
       // 3) Load saved templates from disk (and keep the ContextTemplate in memory)
@@ -113,29 +113,34 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
     // { "<uuid>": { "name": "Alice", "path": "templates/alice.bin" }, ... }
     final dir = await getApplicationDocumentsDirectory();
     final indexFile = File("${dir.path}/templates_index.json");
+    print("LLL");
+    print(await indexFile.exists());
     if (!await indexFile.exists()) {
       debugPrint("No templates_index.json found, skipping template load.");
       return;
     }
 
     final jsonStr = await indexFile.readAsString();
+    print("hello");
+    print(jsonStr);
     final Map<String, dynamic> jsonMap = json.decode(jsonStr);
 
     for (final entry in jsonMap.entries) {
+      print("kkkk");
       final uuid = entry.key;
       final name = entry.value['name'] as String?;
-      final pathRelative = entry.value['path'] as String?;
+      final pathRelative = entry.value['file'] as String?;
 
       if (name == null || pathRelative == null) continue;
 
-      final templateFile = File("${dir.path}/$pathRelative");
+      final templateFile = File("$pathRelative");
       if (!await templateFile.exists()) {
         debugPrint("Template file missing: ${templateFile.path}");
         continue;
       }
 
       final bytes = await templateFile.readAsBytes();
-
+print("000");
       try {
         // loadContextTemplate - creates ContextTemplate from raw bytes
         ContextTemplate ct = _service.loadContextTemplate(bytes);
@@ -157,7 +162,7 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
   void _onCameraImage(CameraImage image) async {
     if (_isProcessingFrame) return;
     if (_faceDetector == null || _faceFitter == null || _templateExtractor == null || _verificationModule == null) return;
-
+// print("hhh");
     _isProcessingFrame = true;
 
     try {
@@ -235,23 +240,30 @@ class _IdentifyFaceScreenState extends State<IdentifyFaceScreen> with WidgetsBin
           if (ctxTemplate == null) continue;
 
           // Build verification context with two templates
+          print("111");
+          print(data["objects"][0]["face_template"]);
+          print("222");
+          print(ctxTemplate);
           Context verificationCtx = _service.createContext({
-            "template1": probeTemplate,
+            "template1": data["objects"][0]["face_template"],
             "template2": ctxTemplate,
           });
 
           try {
+            print("77777");
             await _verificationModule!.process(verificationCtx);
 
             final result = verificationCtx["result"];
             final score = result["score"].get_value() as double? ?? 0.0;
+            print("ooooppppp");
+            print(score);
             // keep best
             if (score > bestScore) {
               bestScore = score;
               bestMatchName = stored["name"] as String;
             }
-          } catch (e) {
-            debugPrint("verification compare failed: $e");
+          } catch (e, st) {
+            debugPrint("verification compare failed: $e\n$st");
           } finally {
             verificationCtx.dispose();
           }
